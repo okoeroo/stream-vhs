@@ -174,6 +174,9 @@ class StreamRecorder(object):
         if config.has_option('settings', 'schedule_refresh'):
             self.schedule_refresh = float(config.get('settings', 'schedule_refresh').strip())
 
+        if config.has_option('settings', 'timer_refresh'):
+            self.timer_refresh = float(config.get('settings', 'timer_refresh').strip())
+
         if not config.has_option('settings', 'command'):
             print "Error in configuration file: Expected option 'command' in section 'settings'"
             raise
