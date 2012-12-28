@@ -231,11 +231,9 @@ class StreamRecorder(object):
                         continue
                 # Throw on the stack
                 self.recorderrecords.append(r)
-
-        # Check
-        for r in self.recorderrecords:
-            r.show()
-
+    def timer(self):
+        print "Schedule"
+        threading.Timer(self.timer_refresh, self.timer).start()
 
     def refresh(self):
         self.refreshing = True
@@ -243,19 +241,25 @@ class StreamRecorder(object):
         self.download()
         self.load_configuration()
         self.process()
+
+        # Check
+#        for r in self.recorderrecords:
+#            r.show()
+
         self.refreshing = False
         threading.Timer(self.schedule_refresh, self.refresh).start()
 
     def go(self):
         self.refresh()
+        self.timer()
 
 def usage():
     print '<program> -h|--help -c|--conf <config file>'
 
 
-def printit():
-    threading.Timer(5.0, printit).start()
-    print "Hello, World!"
+#def printit():
+#    threading.Timer(5.0, printit).start()
+#    print "Hello, World!"
 
 
 ########### MAIN ############
@@ -264,9 +268,9 @@ if __name__ == "__main__":
 
     try:
         opts, args = getopt.getopt(sys.argv[1:], "hc:", ["help", "conf="])
-    except getopt.GetoptError as err:
+    except getopt.GetoptError:
         print str(err)
-#        usage()
+        usage()
         sys.exit(1)
 
     for o, a in opts:
@@ -277,8 +281,6 @@ if __name__ == "__main__":
             conf = a
         else:
             assert False, "unhandled option"
-
-#    printit()
 
     print "Stream VHS"
     s = StreamRecorder(conf)
