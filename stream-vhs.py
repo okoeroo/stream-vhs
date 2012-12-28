@@ -4,6 +4,7 @@ import threading
 import sys,os,getopt
 import urllib2
 import ConfigParser
+import datetime
 from icalendar import Calendar, Event, TypesFactory
 
 url = None
@@ -79,6 +80,13 @@ class RecorderRecord(object):
         cmd = cmd.replace('$FILE', self.get_filename())
         cmd = cmd.replace('$URL',  self.url)
         return cmd
+
+    def is_showtime(self):
+        if self.begin_dt > datetime.now() and self.end_dt < datetime.now():
+            print "SHOW TIME!"
+            self.show()
+            return True
+        return False
 
     def show(self):
         print "-     Title %s" % self.title
@@ -231,8 +239,17 @@ class StreamRecorder(object):
                         continue
                 # Throw on the stack
                 self.recorderrecords.append(r)
+
+    def whatson(self):
+        for r in self.recorderrecords:
+            r.is_showtime()
+
+
     def timer(self):
         print "Schedule"
+
+        self.whatson()
+
         threading.Timer(self.timer_refresh, self.timer).start()
 
     def refresh(self):
