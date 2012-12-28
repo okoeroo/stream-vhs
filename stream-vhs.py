@@ -19,6 +19,8 @@ class RecorderRecord(object):
     extention = None
     prefix = None
     dumpdir = None
+    command = None
+    url = None
 
     def __init__(self, title=None, begin=None, end=None):
         self.title = title
@@ -49,6 +51,12 @@ class RecorderRecord(object):
     def set_dumpdir(self, dumpdir):
         self.dumpdir = dumpdir
 
+    def set_command(self, command):
+        self.command = command
+
+    def set_url(self, url):
+        self.url = url
+
     def get_filename(self):
         if self.title == None:
             return None
@@ -63,6 +71,15 @@ class RecorderRecord(object):
             name = self.prefix + name
         return name.replace(' ','-')
 
+    def get_command(self):
+        if self.get_filename() == None or self.url == None:
+            return None
+
+        cmd = self.command
+        cmd = cmd.replace('$FILE', self.get_filename())
+        cmd = cmd.replace('$URL',  self.url)
+        return cmd
+
     def show(self):
         print "-     Title %s" % self.title
         print "      Begin %s" % self.begin_dt
@@ -72,13 +89,14 @@ class RecorderRecord(object):
         print "  Extention %s" % self.extention
         print "   Filename %s" % self.get_filename()
         print "   Dump Dir %s" % self.dumpdir
-
+        print "    Command %s" % self.get_command()
+        print "        URL %s" % self.url
 
 class StreamRecorder(object):
     recorderrecords = []
-    url = None
+    command = None
     config = None
-    rooms = None
+    rooms = {}
     prefix = None
     extention = None
     dumpdir = "."
@@ -116,7 +134,20 @@ class StreamRecorder(object):
             raise
 
         # Get the rooms in the channels section, split the string and trim each part
-        self.rooms = [item.strip() for item in config.get('channels', 'rooms').split(',')]
+        tmp_rooms = [item.strip() for item in config.get('channels', 'rooms').split(',')]
+        for item in tmp_rooms:
+            url  = item.split('#')[0].strip()
+            try:
+                room = item.split('#')[1].strip()
+            except:
+                print "Syntax error: in 'channels' => 'rooms' it is expected to use: <url> # <room name>, <url> # <room name>..."
+                raise
+            if not (url and room):
+                print "Syntax error: in 'channels' => 'rooms' it is expected to use: <url> # <room name>, <url> # <room name>..."
+                raise
+
+            # Combine this in a dict
+            self.rooms[room] = url
 
         if not config.has_section('settings'):
             print "Error in configuration file: Expected section 'settings'"
@@ -125,8 +156,7 @@ class StreamRecorder(object):
         if not config.has_option('settings', 'ical'):
             print "Error in configuration file: Expected option 'ical' in section 'settings'"
             raise
-        else:
-            self.ical_url  = config.get('settings', 'ical').strip()
+        self.ical_url  = config.get('settings', 'ical').strip()
 
         if config.has_option('settings', 'prefix'):
             self.prefix    = config.get('settings', 'prefix').strip()
@@ -136,6 +166,12 @@ class StreamRecorder(object):
 
         if config.has_option('settings', 'dumpdir'):
             self.extention = config.get('settings', 'dumpdir').strip()
+
+        if not config.has_option('settings', 'command'):
+            print "Error in configuration file: Expected option 'command' in section 'settings'"
+            raise
+        self.command = config.get('settings', 'command').strip()
+        print self.command
 
         print "Ready"
 
@@ -159,6 +195,7 @@ class StreamRecorder(object):
                 r.set_prefix(self.prefix)
                 r.set_extention(self.extention)
                 r.set_dumpdir(self.dumpdir)
+                r.set_command(self.command)
 
                 for item in component.sorted_items():
                     if item[0] == 'DTSTART':
@@ -174,6 +211,10 @@ class StreamRecorder(object):
                         continue
                     if item[0] == 'LOCATION':
                         r.set_location(item[1])
+                        for room, url in self.rooms.items():
+                            if room == item[1]:
+                                r.set_url(url)
+                                break
                         continue
                     if item[0] == 'SUMMARY':
                         r.set_title(item[1])
