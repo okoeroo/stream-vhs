@@ -18,6 +18,7 @@ class RecorderRecord(object):
     location = None
     extention = None
     prefix = None
+    dumpdir = None
 
     def __init__(self, title=None, begin=None, end=None):
         self.title = title
@@ -45,6 +46,9 @@ class RecorderRecord(object):
     def set_extention(self, ext):
         self.extention = ext
 
+    def set_dumpdir(self, dumpdir):
+        self.dumpdir = dumpdir
+
     def get_filename(self):
         if self.title == None:
             return None
@@ -67,14 +71,17 @@ class RecorderRecord(object):
         print "     Prefix %s" % self.prefix
         print "  Extention %s" % self.extention
         print "   Filename %s" % self.get_filename()
+        print "   Dump Dir %s" % self.dumpdir
 
 
 class StreamRecorder(object):
+    recorderrecords = []
     url = None
     config = None
     rooms = None
     prefix = None
     extention = None
+    dumpdir = "."
 
     def __init__(self, conffile='/tmp/stream-vhs.conf'):
         try:
@@ -127,6 +134,9 @@ class StreamRecorder(object):
         if config.has_option('settings', 'extention'):
             self.extention = config.get('settings', 'extention').strip()
 
+        if config.has_option('settings', 'dumpdir'):
+            self.extention = config.get('settings', 'dumpdir').strip()
+
         print "Ready"
 
     def download(self):
@@ -138,17 +148,6 @@ class StreamRecorder(object):
         response = urllib2.urlopen(self.ical_url)
         self.ical_raw = response.read()
 
-#        print self.ical_raw
-#
-#        fname = ICSFILE
-#
-#        icsraw = urllib2.urlopen(url)
-#        output = open(fname,'wb')
-#        output.write(icsraw.read())
-#        output.close()
-#
-#        return fname
-
     def process(self):
         r = None
 
@@ -156,13 +155,10 @@ class StreamRecorder(object):
 
         for component in cal.walk():
             if component.name == 'VEVENT':
-                # Recorder items
-                if r != None:
-                    r.show()
-
                 r = RecorderRecord()
                 r.set_prefix(self.prefix)
                 r.set_extention(self.extention)
+                r.set_dumpdir(self.dumpdir)
 
                 for item in component.sorted_items():
                     if item[0] == 'DTSTART':
@@ -182,6 +178,12 @@ class StreamRecorder(object):
                     if item[0] == 'SUMMARY':
                         r.set_title(item[1])
                         continue
+                # Throw on the stack
+                self.recorderrecords.append(r)
+
+        # Check
+        for r in self.recorderrecords:
+            r.show()
 
 
     def refresh(self):
@@ -190,7 +192,7 @@ class StreamRecorder(object):
 
 
 def usage():
-    print '<program> -h|--help -u|--url <url to ics>'
+    print '<program> -h|--help -c|--conf <config file>'
 
 
 def printit():
@@ -198,7 +200,7 @@ def printit():
     print "Hello, World!"
 
 
-
+########### MAIN ############
 if __name__ == "__main__":
     conf = 'stream-vhs.conf'
 
@@ -219,9 +221,8 @@ if __name__ == "__main__":
             assert False, "unhandled option"
 
 #    printit()
-#    ics_file = download(url)
 
-    print "StreamRecorder"
+    print "Stream VHS"
     s = StreamRecorder(conf)
     s.refresh()
 
