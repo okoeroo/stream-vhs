@@ -94,33 +94,37 @@ class RecorderRecord(object):
 
 class StreamRecorder(object):
     recorderrecords = []
+    refreshing = False
     command = None
     config = None
     rooms = {}
     prefix = None
     extention = None
     dumpdir = "."
+    conffile = "stream-vhs.conf"
+    schedule_refresh = 60.0
+    timer_refresh = 10.0
 
-    def __init__(self, conffile='/tmp/stream-vhs.conf'):
+    def __init__(self, conffile='stream-vhs.conf'):
+        self.conffile = conffile
         try:
-            self.load_configuration(conffile)
+            self.load_configuration()
         except:
             sys.exit(1)
 
-    def load_configuration(self, conffile):
-        print 'load_configurationi %s' % conffile
+    def load_configuration(self):
+        print 'load_configuration %s' % self.conffile
         try:
-            if not os.path.exists(conffile):
-                print "Could not open the configuration file \'%s\'" % conffile
+            if not os.path.exists(self.conffile):
+                print "Could not open the configuration file \'%s\'" % self.conffile
                 raise
         except:
             raise
 
-        print 'load_configuration'
         config = ConfigParser.RawConfigParser()
 
         try:
-            config.read(conffile)
+            config.read(self.conffile)
         except:
             print "Error in configuration file: Syntax error. Please fix the configuration file to be a proper .ini style config file"
             raise
@@ -166,6 +170,9 @@ class StreamRecorder(object):
 
         if config.has_option('settings', 'dumpdir'):
             self.extention = config.get('settings', 'dumpdir').strip()
+
+        if config.has_option('settings', 'schedule_refresh'):
+            self.schedule_refresh = float(config.get('settings', 'schedule_refresh').strip())
 
         if not config.has_option('settings', 'command'):
             print "Error in configuration file: Expected option 'command' in section 'settings'"
@@ -228,9 +235,16 @@ class StreamRecorder(object):
 
 
     def refresh(self):
+        self.refreshing = True
+        recorderrecords = []
         self.download()
+        self.load_configuration()
         self.process()
+        self.refreshing = False
+        threading.Timer(self.schedule_refresh, self.refresh).start()
 
+    def go(self):
+        self.refresh()
 
 def usage():
     print '<program> -h|--help -c|--conf <config file>'
@@ -265,5 +279,5 @@ if __name__ == "__main__":
 
     print "Stream VHS"
     s = StreamRecorder(conf)
-    s.refresh()
+    s.go()
 
