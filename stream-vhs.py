@@ -5,6 +5,8 @@ import sys,os,getopt
 import urllib2
 import ConfigParser
 import datetime
+import time
+import signal
 import subprocess
 from subprocess import Popen, PIPE, STDOUT
 from pytz import timezone
@@ -319,7 +321,6 @@ class StreamRecorder(object):
 
         cmd = r.get_command().split()
         cmd = 'sleep 20'.split()
-        print r.get_command()
         p = subprocess.Popen(cmd, stdout=PIPE, stdin=PIPE, stderr=STDOUT)
         r.pid = p.pid
 
@@ -346,6 +347,13 @@ class StreamRecorder(object):
             r.change_state(RecorderRecord().FINISHED)
             return
 
+    def stop_recording(self, r):
+        if r.state == RecorderRecord().RECORDING:
+            if r.pid != None:
+                os.kill(r.pid, signal.SIGTERM)
+                time.sleep(1)
+                os.kill(r.pid, signal.SIGKILL)
+
     def whatson(self):
         something = False
         for r in self.recorderrecords:
@@ -360,6 +368,8 @@ class StreamRecorder(object):
             if r.is_showtime():
                 something = True
                 self.start_recording(r)
+            else:
+                self.stop_recording(r)
 
         if something == False:
             print "No shows are on at the moment"
