@@ -5,6 +5,8 @@ import sys,os,getopt
 import urllib2
 import ConfigParser
 import datetime
+from pytz import timezone
+import pytz
 from icalendar import Calendar, Event, TypesFactory
 
 url = None
@@ -82,7 +84,7 @@ class RecorderRecord(object):
         return cmd
 
     def is_showtime(self):
-        if self.begin_dt > datetime.now() and self.end_dt < datetime.now():
+        if self.begin_dt < datetime.datetime.now(amsterdam) and self.end_dt > datetime.datetime.now(amsterdam):
             print "SHOW TIME!"
             self.show()
             return True
@@ -244,7 +246,6 @@ class StreamRecorder(object):
         for r in self.recorderrecords:
             r.is_showtime()
 
-
     def timer(self):
         print "Schedule"
 
@@ -283,6 +284,7 @@ def usage():
 if __name__ == "__main__":
     conf = 'stream-vhs.conf'
 
+    amsterdam = timezone('Europe/Amsterdam')
     try:
         opts, args = getopt.getopt(sys.argv[1:], "hc:", ["help", "conf="])
     except getopt.GetoptError:
