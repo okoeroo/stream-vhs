@@ -420,14 +420,14 @@ if __name__ == "__main__":
 
     amsterdam = timezone('Europe/Amsterdam')
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "dhc:", ["debug", "help", "conf="])
+        opts, args = getopt.getopt(sys.argv[1:], "dhc:", ["dryrun", "help", "conf="])
     except getopt.GetoptError:
         print str(err)
         usage()
         sys.exit(1)
 
     for o, a in opts:
-        if o in ("-d", "--debug"):
+        if o in ("-d", "--dryrun"):
             debug = False
         elif o in ("-h", "--help"):
             usage()
