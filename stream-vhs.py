@@ -12,8 +12,13 @@ from icalendar import Calendar, Event, TypesFactory
 url = None
 ICSFILE = '/tmp/ics-calendar.ics'
 
-
 class RecorderRecord(object):
+    SCHEDULED = 0
+    RECORDING = 1
+    FINISHED  = 2
+    ERROR     = 3
+    NOPE      = 4
+
     begin_dt = None
     end_dt = None
     title = None
@@ -24,6 +29,8 @@ class RecorderRecord(object):
     dumpdir = None
     command = None
     url = None
+    state = SCHEDULED
+    pid = None
 
     def __init__(self, title=None, begin=None, end=None):
         self.title = title
@@ -85,8 +92,6 @@ class RecorderRecord(object):
 
     def is_showtime(self):
         if self.begin_dt < datetime.datetime.now(amsterdam) and self.end_dt > datetime.datetime.now(amsterdam):
-            print "SHOW TIME!"
-            self.show()
             return True
         return False
 
@@ -242,15 +247,43 @@ class StreamRecorder(object):
                 # Throw on the stack
                 self.recorderrecords.append(r)
 
+    def start_recording(self, r):
+        if r.state == RecorderRecord().NOPE or r.state == RecorderRecord().ERROR:
+            return
+
+        if  r.state == RecorderRecord().FINISHED:
+            print "Already finished, skipping"
+            return
+
+        if r.state == RecorderRecord().RECORDING:
+            print "-------- Recording...                     --------"
+
+            print "Finished? Recording -> Finished"
+            r.state = RecorderRecord().FINISHED
+
+        if r.state == RecorderRecord().SCHEDULED:
+            print "-------- Starting scheduled recording for --------"
+            r.show()
+
+            print "Scheduled -> Recording"
+            r.state = RecorderRecord().RECORDING
+
+
     def whatson(self):
         for r in self.recorderrecords:
-            r.is_showtime()
+            # NOPE
+            if r.get_command() == None or r.get_command() == '':
+                r.state = RecorderRecord().NOPE
+                continue
+            if r.state == RecorderRecord().NOPE:
+                continue
+
+            # Is the show on yet?
+            if r.is_showtime():
+                self.start_recording(r)
 
     def timer(self):
-        print "Schedule"
-
         self.whatson()
-
         threading.Timer(self.timer_refresh, self.timer).start()
 
     def refresh(self):
@@ -265,7 +298,7 @@ class StreamRecorder(object):
 #            r.show()
 
         self.refreshing = False
-        threading.Timer(self.schedule_refresh, self.refresh).start()
+#        threading.Timer(self.schedule_refresh, self.refresh).start()
 
     def go(self):
         self.refresh()
