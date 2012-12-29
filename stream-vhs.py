@@ -33,11 +33,19 @@ class RecorderRecord(object):
     url = None
     state = SCHEDULED
     pid = None
+    pretime_minutes_td = datetime.timedelta(seconds=1 * 60)
+    overtime_minutes_td = datetime.timedelta(seconds=1 * 60)
 
     def __init__(self, title=None, begin=None, end=None):
         self.title = title
         self.begin_dt = begin
         self.end_dt = end 
+
+    def set_pretime_minutes_td(self, pretime_minutes_td):
+        self.pretime_minutes_td = pretime_minutes_td
+
+    def set_overtime_minutes_td(self, overtime_minutes_td):
+        self.overtime_minutes_td = overtime_minutes_td
 
     def set_begin_dt(self, begin):
         self.begin_dt = begin
@@ -96,7 +104,7 @@ class RecorderRecord(object):
         return cmd
 
     def is_showtime(self):
-        if self.begin_dt < datetime.datetime.now(amsterdam) and self.end_dt > datetime.datetime.now(amsterdam):
+        if (self.begin_dt - self.pretime_minutes_td) < datetime.datetime.now(amsterdam) and (self.end_dt + self.overtime_minutes_td) > datetime.datetime.now(amsterdam):
             return True
         return False
 
@@ -124,6 +132,8 @@ class StreamRecorder(object):
     conffile = "stream-vhs.conf"
     schedule_refresh = 60.0
     timer_refresh = 10.0
+    pretime_minutes_td = datetime.timedelta(seconds=1 * 60)
+    overtime_minutes_td = datetime.timedelta(seconds=1 * 60)
 
     def __init__(self, conffile='stream-vhs.conf'):
         self.conffile = conffile
@@ -197,6 +207,20 @@ class StreamRecorder(object):
         if config.has_option('settings', 'timer_refresh'):
             self.timer_refresh = float(config.get('settings', 'timer_refresh').strip())
 
+        if config.has_option('settings', 'pretime_minutes'):
+            try:
+                i = int(config.get('settings', 'pretime_minutes').strip())
+                self.pretime_minutes_td = datetime.timedelta(seconds=i * 60)
+            except:
+                print "Error in configuration file: Casting error in the option 'pretime_minutes' in section 'settings'"
+
+        if config.has_option('settings', 'overtime_minutes'):
+            try:
+                i = int(config.get('settings', 'overtime_minutes').strip())
+                self.overtime_minutes_td = datetime.timedelta(seconds=i * 60)
+            except:
+                print "Error in configuration file: Casting error in the option 'overtime_minutes' in section 'settings'"
+
         if not config.has_option('settings', 'command'):
             print "Error in configuration file: Expected option 'command' in section 'settings'"
             raise
@@ -223,6 +247,8 @@ class StreamRecorder(object):
                 r.set_extention(self.extention)
                 r.set_dumpdir(self.dumpdir)
                 r.set_command(self.command)
+                r.set_pretime_minutes_td(self.pretime_minutes_td)
+                r.set_overtime_minutes_td(self.overtime_minutes_td)
 
                 for item in component.sorted_items():
                     if item[0] == 'DTSTART':
