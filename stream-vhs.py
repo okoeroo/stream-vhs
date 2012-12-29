@@ -41,6 +41,25 @@ class RecorderRecord(object):
         self.begin_dt = begin
         self.end_dt = end 
 
+    def get_state_str(self, state):
+        if state == self.SCHEDULED:
+            return "Scheduled"
+        elif state == self.RECORDING:
+            return "Recording"
+        elif state == self.FINISHED:
+            return "Finished"
+        elif state == self.ERROR:
+            return "Error"
+        elif state == self.NOPE:
+            return "Nope"
+        else:
+            return "Unknown state"
+
+    def change_state(self, new_state):
+        if new_state != self.state:
+            print "--- State change: " + self.get_state_str(self.state) + " -> " + self.get_state_str(new_state)
+        self.state = new_state
+
     def set_pretime_minutes_td(self, pretime_minutes_td):
         self.pretime_minutes_td = pretime_minutes_td
 
@@ -299,7 +318,7 @@ class StreamRecorder(object):
             r.show()
 
         cmd = r.get_command().split()
-        cmd = 'sleep 30'.split()
+        cmd = 'sleep 20'.split()
         print r.get_command()
         p = subprocess.Popen(cmd, stdout=PIPE, stdin=PIPE, stderr=STDOUT)
         r.pid = p.pid
@@ -309,24 +328,22 @@ class StreamRecorder(object):
             return
 
         if r.state == RecorderRecord().SCHEDULED:
-            print "-------- Starting scheduled recording for --------"
-            r.show()
             self.exec_subprocess(r)
 
-            print "Scheduled -> Recording"
-            r.state = RecorderRecord().RECORDING
+            r.change_state(RecorderRecord().RECORDING)
+            r.show()
 
         if r.state == RecorderRecord().RECORDING:
-            print "-------- Recording...                     --------"
+            r.change_state(RecorderRecord().RECORDING)
 
             # Check if the PID is still alive
             if not self.process_exists(r.pid):
-                print "PID not found, assuming finished. Recording -> Finished"
-                r.state = RecorderRecord().FINISHED
+                r.change_state(RecorderRecord().FINISHED)
+                r.show()
             return
 
         if  r.state == RecorderRecord().FINISHED:
-            print "Already finished, skipping"
+            r.change_state(RecorderRecord().FINISHED)
             return
 
     def whatson(self):
