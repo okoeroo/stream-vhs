@@ -81,7 +81,10 @@ class RecorderRecord(object):
             name = name + '.' + self.extention
         if self.prefix:
             name = self.prefix + name
-        return name.replace(' ','-')
+
+        name = name.replace(' ','-')
+        name = self.dumpdir + '/' + name
+        return name
 
     def get_command(self):
         if self.get_filename() == None or self.url == None:
@@ -186,7 +189,7 @@ class StreamRecorder(object):
             self.extention = config.get('settings', 'extention').strip()
 
         if config.has_option('settings', 'dumpdir'):
-            self.extention = config.get('settings', 'dumpdir').strip()
+            self.dumpdir = config.get('settings', 'dumpdir').strip()
 
         if config.has_option('settings', 'schedule_refresh'):
             self.schedule_refresh = float(config.get('settings', 'schedule_refresh').strip())
@@ -254,8 +257,6 @@ class StreamRecorder(object):
         ps.stdout.close()
         ps.wait()
 
-        print search_pid
-
         for line in output.split("\n"):
             if line != "" and line != None:
                 fields = line.split()
@@ -273,6 +274,7 @@ class StreamRecorder(object):
 
         cmd = r.get_command().split()
         cmd = 'sleep 30'.split()
+        print r.get_command()
         p = subprocess.Popen(cmd, stdout=PIPE, stdin=PIPE, stderr=STDOUT)
         r.pid = p.pid
 
