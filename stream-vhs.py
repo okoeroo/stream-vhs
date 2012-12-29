@@ -5,6 +5,8 @@ import sys,os,getopt
 import urllib2
 import ConfigParser
 import datetime
+import subprocess
+from subprocess import Popen, PIPE, STDOUT
 from pytz import timezone
 import pytz
 from icalendar import Calendar, Event, TypesFactory
@@ -196,9 +198,6 @@ class StreamRecorder(object):
             print "Error in configuration file: Expected option 'command' in section 'settings'"
             raise
         self.command = config.get('settings', 'command').strip()
-        print self.command
-
-        print "Ready"
 
     def download(self):
         if self.ical_url == None:
@@ -247,29 +246,63 @@ class StreamRecorder(object):
                 # Throw on the stack
                 self.recorderrecords.append(r)
 
+
+    def process_exists(self, search_pid):
+        ps = subprocess.Popen("ps ax", shell=True, stdout=subprocess.PIPE)
+        ps_pid = ps.pid
+        output = ps.stdout.read()
+        ps.stdout.close()
+        ps.wait()
+
+        print search_pid
+
+        for line in output.split("\n"):
+            if line != "" and line != None:
+                fields = line.split()
+                pid = fields[0]
+
+                if(pid == str(search_pid)):
+                    return True
+        return False
+
+
+    def exec_subprocess(self, r):
+        if r.state != RecorderRecord().SCHEDULED:
+            print "Error: state is not scheduled for the recording:"
+            r.show()
+
+        cmd = r.get_command().split()
+        cmd = 'sleep 30'.split()
+        p = subprocess.Popen(cmd, stdout=PIPE, stdin=PIPE, stderr=STDOUT)
+        r.pid = p.pid
+
     def start_recording(self, r):
         if r.state == RecorderRecord().NOPE or r.state == RecorderRecord().ERROR:
+            return
+
+        if r.state == RecorderRecord().SCHEDULED:
+            print "-------- Starting scheduled recording for --------"
+            r.show()
+            self.exec_subprocess(r)
+
+            print "Scheduled -> Recording"
+            r.state = RecorderRecord().RECORDING
+
+        if r.state == RecorderRecord().RECORDING:
+            print "-------- Recording...                     --------"
+
+            # Check if the PID is still alive
+            if not self.process_exists(r.pid):
+                print "PID not found, assuming finished. Recording -> Finished"
+                r.state = RecorderRecord().FINISHED
             return
 
         if  r.state == RecorderRecord().FINISHED:
             print "Already finished, skipping"
             return
 
-        if r.state == RecorderRecord().RECORDING:
-            print "-------- Recording...                     --------"
-
-            print "Finished? Recording -> Finished"
-            r.state = RecorderRecord().FINISHED
-
-        if r.state == RecorderRecord().SCHEDULED:
-            print "-------- Starting scheduled recording for --------"
-            r.show()
-
-            print "Scheduled -> Recording"
-            r.state = RecorderRecord().RECORDING
-
-
     def whatson(self):
+        something = False
         for r in self.recorderrecords:
             # NOPE
             if r.get_command() == None or r.get_command() == '':
@@ -280,9 +313,14 @@ class StreamRecorder(object):
 
             # Is the show on yet?
             if r.is_showtime():
+                something = True
                 self.start_recording(r)
 
+        if something == False:
+            print "No shows are on at the moment"
+
     def timer(self):
+        # Timer loop
         self.whatson()
         threading.Timer(self.timer_refresh, self.timer).start()
 
@@ -292,6 +330,8 @@ class StreamRecorder(object):
         self.download()
         self.load_configuration()
         self.process()
+
+        print "Ready"
 
         # Check
 #        for r in self.recorderrecords:
