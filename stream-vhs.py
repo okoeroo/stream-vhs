@@ -355,9 +355,13 @@ class StreamRecorder(object):
     def stop_recording(self, r):
         if r.state == RecorderRecord().RECORDING:
             if r.pid != None:
-                os.kill(r.pid, signal.SIGTERM)
-                time.sleep(1)
-                os.kill(r.pid, signal.SIGKILL)
+                try:
+                    os.kill(r.pid, signal.SIGTERM)
+                    time.sleep(1)
+                    os.kill(r.pid, signal.SIGKILL)
+                    r.change_state(RecorderRecord().FINISHED)
+                except:
+                    print "Warning: Process already shot"
 
     def whatson(self):
         something = False
@@ -416,7 +420,7 @@ def usage():
 ########### MAIN ############
 if __name__ == "__main__":
     conf = 'stream-vhs.conf'
-    debug = False
+    dryrun = False
 
     amsterdam = timezone('Europe/Amsterdam')
     try:
@@ -428,7 +432,7 @@ if __name__ == "__main__":
 
     for o, a in opts:
         if o in ("-d", "--dryrun"):
-            debug = False
+            dryrun = False
         elif o in ("-h", "--help"):
             usage()
             sys.exit()
@@ -438,6 +442,6 @@ if __name__ == "__main__":
             assert False, "unhandled option"
 
     print "Stream VHS"
-    s = StreamRecorder(conf, debug)
+    s = StreamRecorder(conf, dryrun)
     s.go()
 
