@@ -155,8 +155,10 @@ class StreamRecorder(object):
     timer_refresh = 10.0
     pretime_minutes_td = datetime.timedelta(seconds=1 * 60)
     overtime_minutes_td = datetime.timedelta(seconds=1 * 60)
+    debug = False
 
-    def __init__(self, conffile='stream-vhs.conf'):
+    def __init__(self, conffile='stream-vhs.conf', debug=False):
+        self.debug = debug
         self.conffile = conffile
         try:
             self.load_configuration()
@@ -319,8 +321,11 @@ class StreamRecorder(object):
             print "Error: state is not scheduled for the recording:"
             r.show()
 
-        cmd = r.get_command().split()
-        cmd = 'sleep 20'.split()
+        if self.debug:
+            cmd = 'sleep 20'.split()
+        else:
+            cmd = r.get_command().split()
+
         p = subprocess.Popen(cmd, stdout=PIPE, stdin=PIPE, stderr=STDOUT)
         r.pid = p.pid
 
@@ -411,17 +416,20 @@ def usage():
 ########### MAIN ############
 if __name__ == "__main__":
     conf = 'stream-vhs.conf'
+    debug = False
 
     amsterdam = timezone('Europe/Amsterdam')
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "hc:", ["help", "conf="])
+        opts, args = getopt.getopt(sys.argv[1:], "dhc:", ["debug", "help", "conf="])
     except getopt.GetoptError:
         print str(err)
         usage()
         sys.exit(1)
 
     for o, a in opts:
-        if o in ("-h", "--help"):
+        if o in ("-d", "--debug"):
+            debug = False
+        elif o in ("-h", "--help"):
             usage()
             sys.exit()
         elif o in ("-c", "--conf"):
@@ -430,6 +438,6 @@ if __name__ == "__main__":
             assert False, "unhandled option"
 
     print "Stream VHS"
-    s = StreamRecorder(conf)
+    s = StreamRecorder(conf, debug)
     s.go()
 
