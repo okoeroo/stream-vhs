@@ -1,0 +1,75 @@
+     _______.___________..______       _______     ___      .___  ___. 
+    /       |           ||   _  \     |   ____|   /   \     |   \/   | 
+   |   (----`---|  |----`|  |_)  |    |  |__     /  ^  \    |  \  /  | 
+    \   \       |  |     |      /     |   __|   /  /_\  \   |  |\/|  | 
+.----)   |      |  |     |  |\  \----.|  |____ /  _____  \  |  |  |  | 
+|_______/       |__|     | _| `._____||_______/__/     \__\ |__|  |__| 
+                                                                       
+____    ____  __    __       _______.
+\   \  /   / |  |  |  |     /       |
+ \   \/   /  |  |__|  |    |   (----`
+  \      /   |   __   |     \   \    
+   \    /    |  |  |  | .----)   |   
+    \__/     |__|  |__| |_______/    
+                                     
+
+Record all the streams!
+
+
+Run:
+    python stream-vhs.py [-h|--help] [-c <conf>|--conf <conf>] [-d|--dryrun]
+
+
+Configuration file:
+    default filename ./stream-vhs.conf
+
+    Section 'channels':
+        Options:
+            rooms:
+                A list of stream URLs followed by a hash-sign (#) and
+                room/location. This room/location string is trimmed and will be
+                matched with the iCal LOCATION value. This can be follow by a
+                new combination of URL hash room/location. 
+
+    Section 'settings':
+        Options:
+            ical: 
+                One URL to download the iCal ics file from.
+            prefix = 29c3-
+                All stream output files will be prefixed with this string.
+            extention = asf
+                All stream output files will be fitted with this extention
+            command = mplayer -dumpstream -dumpfile $FILE $URL
+                The command to stream and dump with. The command will be used
+                per stream capture as is. The resulting filename will be 
+                replacing the $FILE in the template. Equally the $URL will be
+                replaced with the stream URL from the channels.rooms option.
+            schedule_refresh = 15.0
+                Refresh time in seconds to refresh/download the iCal data.
+                This option is DISABLED
+            timer_refresh = 5.0
+                Amount of seconds to wait for a next check up of the scheduled
+                recordings and if they need to start recording or stop.
+            pretime_minutes = 5
+                This setting lets the timer load the stream x minutes prior to 
+                the time.
+            overtime_minutes = 5
+                This setting lets the timer stop the stream x minutes after the
+                scheduled time.
+
+
+Example .conf file:
+--- Begin file ---
+[channels]
+rooms = http://wmv.29c3.fem-net.de/Saal1 # Saal 1, http://wmv.29c3.fem-net.de/Saal4 # Saal 4, http://wmv.29c3.fem-net.de/Saal6 # Saal 6
+
+[settings]
+ical = http://events.ccc.de/congress/2012/Fahrplan/schedule.en.ics
+prefix = 29c3-
+extention = asf
+command = mplayer -dumpstream -dumpfile $FILE $URL
+schedule_refresh = 15.0
+timer_refresh = 5.0
+pretime_minutes = 5
+overtime_minutes = 5
+--- end file ---
