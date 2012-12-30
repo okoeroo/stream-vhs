@@ -8,6 +8,7 @@ import datetime
 import time
 import signal
 import subprocess
+import math
 from subprocess import Popen, PIPE, STDOUT
 from pytz import timezone
 import pytz
@@ -156,6 +157,7 @@ class StreamRecorder(object):
     pretime_minutes_td = datetime.timedelta(seconds=1 * 60)
     overtime_minutes_td = datetime.timedelta(seconds=1 * 60)
     debug = False
+    already_mentioned_no_shows_are_on = 0
 
     def __init__(self, conffile='stream-vhs.conf', debug=False):
         self.debug = debug
@@ -360,6 +362,7 @@ class StreamRecorder(object):
                     time.sleep(1)
                     os.kill(r.pid, signal.SIGKILL)
                     r.change_state(RecorderRecord().FINISHED)
+                    r.show()
                 except:
                     print "Warning: Process already shot"
 
@@ -376,12 +379,27 @@ class StreamRecorder(object):
             # Is the show on yet?
             if r.is_showtime():
                 something = True
+                self.already_mentioned_no_shows_are_on = 0
                 self.start_recording(r)
             else:
                 self.stop_recording(r)
 
-        if something == False:
+        if something == False and self.already_mentioned_no_shows_are_on == 0:
             print "No shows are on at the moment"
+            self.already_mentioned_no_shows_are_on = 1
+        elif something == False and self.already_mentioned_no_shows_are_on > 0:
+            go_back = 0.005 / math.pow(self.already_mentioned_no_shows_are_on, 2)
+            go_fwd  = 0.05 / math.pow(self.already_mentioned_no_shows_are_on, 2)
+
+            for i in xrange(0, self.already_mentioned_no_shows_are_on):
+                sys.stdout.write('\b')
+                sys.stdout.flush()
+                time.sleep(go_back)
+            for i in xrange(0, self.already_mentioned_no_shows_are_on):
+                sys.stdout.write('.')
+                sys.stdout.flush()
+                time.sleep(go_fwd)
+            self.already_mentioned_no_shows_are_on += 1
 
     def timer(self):
         # Timer loop
